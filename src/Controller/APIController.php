@@ -22,10 +22,12 @@ class APIController extends AbstractController
         return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);
     }
 
-    #[Route('/api/utilisateurs/{id}', name: 'detailUser', methods: ['GET'])]
+    #[Route('/utilisateurs/{user}', name: 'detailUser', methods: ['GET'])]
     public function getDetailUser(User $user, SerializerInterface $serializer): JsonResponse {
 
-        $jsonUser = $serializer->serialize($user, 'json');
-        return new JsonResponse($jsonUser, Response::HTTP_OK, ['accept' => 'json'], true);
+        {
+            $jsonUser = $serializer->serialize($user, 'json');
+            return new JsonResponse($jsonUser, Response::HTTP_OK, ['accept' => 'json'], true);
+        }
    }
 }
