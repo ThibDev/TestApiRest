@@ -1,4 +1,4 @@
-fetch("http://127.0.0.1:8000/api/utilisateurs/liste")
+fetch("http://127.0.0.1:8000/api/user")
 .then(users =>{
       return users.json();
 })
