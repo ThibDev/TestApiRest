@@ -5,57 +5,116 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use JMS\Serializer\SerializerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 #[Route('/api', name: 'api_')]
 class APIController extends AbstractController
 {
-    #[Route('/utilisateurs/liste', name: 'liste', methods: ['GET'])]
-    public function liste(UserRepository $userRepository, SerializerInterface $serializer): JsonResponse
+    #[Route('/user', name: 'get_all_user', methods: ['GET'])]
+    public function getAll(UserRepository $userRepository): Response
     {
-        $user = $userRepository->findAll();
-        $jsonUserList = $serializer->serialize($user, 'json');
-        return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);
-    }
+        $users = $userRepository->findAll();
 
-    #[Route('/utilisateurs/{user}', name: 'detailUser', methods: ['GET'])]
-    public function getDetailUser(User $user, SerializerInterface $serializer): JsonResponse
-    { {
-            $jsonUser = $serializer->serialize($user, 'json');
-            return new JsonResponse($jsonUser, Response::HTTP_OK, ['accept' => 'json'], true);
+        $data = [];
+        foreach ($users as $user) {
+            $data[] = $user;
         }
+
+        return $this->json($data, Response::HTTP_OK);
     }
 
-    #[Route('/utilisateurs/delete/{user}', name: 'deleteUser', methods: ['DELETE'])]
-    public function deleteUser(User $user, EntityManagerInterface $em): JsonResponse 
+    #[Route('/user/{user}', name: 'get_user', methods: ['GET'])]
+    public function get($user, UserRepository $userRepository): Response
     {
-        $em->remove($user);
+        $user = $userRepository->findOneBy(['idUser' => $user]);
+
+        if ($user === null) {
+            return $this->json(null, Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json($user, Response::HTTP_OK);
+    }
+
+    #[Route('/user/add', name: 'add_user', methods: ['POST'])]
+    public function add(Request $request, EntityManagerInterface $em): Response
+    {
+        $data = json_decode($request->getContent(), true);
+
+        // if (empty($data['titre']) || empty($data['auteur']) || empty($data['nbPage'])) {
+        //     return $this->json(['message' => 'Tous les champs doivent être renseignés'], Response::HTTP_BAD_REQUEST);
+        // }
+        $lastname = $data['lastname'];
+        $firstname = $data['firstname'];
+        $mail = $data['mail'];
+        $password = $data['password'];
+        $phone = $data['phone'];
+        $cv = $data['cv'];
+        $area = $data['area'];
+        $address = $data['address'];
+        $role = $data['role'];
+        $admin = false;
+
+        $newUser = new User();
+        $newUser->setLastname($lastname)->setFirstname($firstname)->setMail($mail)->setPassword($password)->setPhone($phone)->setCv($cv)
+        ->setArea($area)->setAddress($address)->setRole($role)->setAdmin($admin);
+
+        $em->persist($newUser);
         $em->flush();
 
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        return $this->json(['message' => 'User créé'], Response::HTTP_CREATED);
     }
 
-    #[Route('/utilisateurs/ajout', name:"createUser", methods: ['POST'])]
-    public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator): JsonResponse 
-    {
-        $user = $serializer->deserialize($request->getContent(), User::class, 'json');
+    #[Route('/user/update/{user}', name: 'put_patch_user', methods: ['PUT','PATCH'])]
+public function putPatch(Request $request, $user, UserRepository $userRepository, EntityManagerInterface $em): Response
+{
+    $data = json_decode($request->getContent(), true);
 
-        // Récupération de l'ensemble des données envoyées sous forme de tableau
-        $content = $request->toArray();
-     
-        $em->persist($user);
-        $em->flush();
+    $userObject = $userRepository->findOneBy(['idUser'=>$user]);
 
-        $jsonUser = $serializer->serialize($user, 'json');
-
-        $location = $urlGenerator->generate('detailUser', ['id' => $user->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
-
-        return new JsonResponse($jsonUser, Response::HTTP_CREATED, ["Location" => $location], true);
+    if($userObject===null){
+        throw $this->createNotFoundException(sprintf(
+            'Pas de user trouvé "%s"',
+            $user
+        ));
     }
+
+    // if($request->getMethod()==='PUT' and (empty($data['titre']) || empty($data['auteur']) || empty($data['nbPage']))){
+    //     return $this->json(['message'=>'Tous les champs doivent être renseignés'],Response::HTTP_BAD_REQUEST);
+    // }
+
+    if(!empty($data['lastname'])) $userObject->setLastname($data['lastname']);
+    if(!empty($data['firstname'])) $userObject->setFirstname($data['firstname']);
+    if(!empty($data['mail'])) $userObject->setMail($data['mail']);
+    if(!empty($data['password'])) $userObject->setPassword($data['password']);
+    if(!empty($data['phone'])) $userObject->setPhone($data['phone']);
+    if(!empty($data['cv'])) $userObject->setCv($data['cv']);
+    if(!empty($data['area'])) $userObject->setArea($data['area']);
+    if(!empty($data['address'])) $userObject->setAddress($data['address']);
+    if(!empty($data['role'])) $userObject->setRole($data['role']);
+    if(!empty($data['admin'])) $userObject->setAdmin($data['false']);
+    $em->flush();
+
+    return $this->json($userObject,Response::HTTP_OK);
+}
+
+#[Route('/user/delete/{user}', name: 'delete_user', methods: ['DELETE'])]
+public function delete($user, UserRepository $userRepository, EntityManagerInterface $em): Response
+{
+    $userObject = $userRepository->findOneBy(['idUser'=>$user]);
+
+    if($userObject===null){
+        throw $this->createNotFoundException(sprintf(
+            'Pas de user trouvé "%s"',
+            $user
+        ));
+    }
+
+    $em->remove($userObject);
+    $em->flush();
+
+    return $this->json(null,Response::HTTP_NO_CONTENT);
+}
 }
