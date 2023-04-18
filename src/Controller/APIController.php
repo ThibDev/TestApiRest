@@ -23,7 +23,7 @@ class APIController extends AbstractController
         foreach ($users as $user) {
             $data[] = $user;
         }
-
+        
         return $this->json($data, Response::HTTP_OK);
     }
 
